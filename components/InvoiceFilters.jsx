@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { INVOICE_STATUSES, STATUS_PILL_MAP } from "@/lib/types/invoice";
 
 export const DEFAULT_FILTERS = {
@@ -202,6 +202,33 @@ export function hasAnyActiveFilters(filters, searchQuery = "") {
  */
 export function getResultsSummaryText(shown, total) {
   return `Showing ${shown} of ${total} invoices`;
+}
+
+/**
+ * Builds the aria-sort announcement text for the polite live region.
+ * Returns an empty string when no sort is active.
+ *
+ * @param {string} column - Active sort column (empty = no sort active).
+ * @param {string} dir - Sort direction: 'asc' or 'desc'.
+ * @returns {string}
+ */
+export function getSortAnnouncement(column, dir) {
+  if (!column) return "";
+  const label = SORT_OPTIONS.find((opt) => opt.value === column)?.label ?? column;
+  const direction = dir === "asc" ? "ascending" : "descending";
+  return `Sorted by ${label} ${direction}`;
+}
+
+/**
+ * Maps sort direction to aria-sort value.
+ *
+ * @param {string} column - Active sort column (empty means none).
+ * @param {string} dir - Sort direction: 'asc' or 'desc'.
+ * @returns {'ascending'|'descending'|'none'}
+ */
+export function getAriaSort(column, dir) {
+  if (!column) return "none";
+  return dir === "asc" ? "ascending" : "descending";
 }
 
 /**
@@ -439,7 +466,20 @@ export default function InvoiceFilters({ filters, onFilterChange, onClearFilters
   );
 
   const active = hasActiveFilters(filters);
-  const { column: activeColumn } = parseSortState(filters);
+  const { column: activeColumn, dir: activeDir } = parseSortState(filters);
+
+  const sortAnnouncement = getSortAnnouncement(activeColumn, activeDir);
+  const ariaSort = getAriaSort(activeColumn, activeDir);
+
+  const prevAnnouncementRef = useRef(sortAnnouncement);
+  const [liveMessage, setLiveMessage] = useState(sortAnnouncement);
+
+  useEffect(() => {
+    if (sortAnnouncement && sortAnnouncement !== prevAnnouncementRef.current) {
+      setLiveMessage(sortAnnouncement);
+      prevAnnouncementRef.current = sortAnnouncement;
+    }
+  }, [sortAnnouncement]);
 
   return (
     <div className="flex flex-wrap gap-4 items-center">
@@ -507,7 +547,7 @@ export default function InvoiceFilters({ filters, onFilterChange, onClearFilters
         />
       </fieldset>
 
-      <fieldset className="flex items-center gap-2 border-none p-0 m-0">
+      <fieldset className="flex items-center gap-2 border-none p-0 m-0" aria-sort={ariaSort}>
         <legend className="sr-only">Sort Options</legend>
         <select
           value={activeColumn}
@@ -530,6 +570,18 @@ export default function InvoiceFilters({ filters, onFilterChange, onClearFilters
             onFilterChange={onFilterChange}
           />
         ))}
+
+        {/* Polite live region for sort-change announcements — separate from
+            the marketplace results-summary live region in app/invest/page.js */}
+        <span
+          role="status"
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+          data-testid="sort-live-region"
+        >
+          {liveMessage}
+        </span>
       </fieldset>
 
       <button

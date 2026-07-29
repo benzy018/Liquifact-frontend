@@ -110,6 +110,32 @@ Callers that adopt page-based mode should ensure they do not additionally wrap
 
 3. Run `npm test` — the coverage guard and pair assertion both run automatically.
 
+### Sort-Column aria-sort (issue #468)
+
+`components/InvoiceFilters.jsx` exposes programmatic sort state to assistive
+technologies through `aria-sort` on the sort `<fieldset>`. This lets
+screen‑reader users know which column is currently sorted and in which
+direction.
+
+**Values:** `ascending`, `descending`, or `none` — only one active at a time.
+
+**Sort announcement live region:** A dedicated `role="status" aria-live="polite"`
+region inside the sort fieldset announces sort changes (e.g.,
+"Sorted by Amount ascending"). This region is **separate** from the
+marketplace results‑summary announcement in `app/invest/page.js` to avoid
+duplicate output.
+
+**DirectionToggle accessible names:** Each direction toggle button carries an
+`aria-label` that describes the action, not just the field (e.g.,
+"Sort amount ascending", "Sort amount descending"). Inactive toggles use
+more generic labels (e.g., "Sort yield direction").
+
+**Test coverage:** `components/InvoiceFilters.ariasort.test.tsx` validates:
+- `aria-sort` values on the fieldset for all column + direction combinations
+- Live‑region announcement format and separation from results summary
+- DirectionToggle accessible names
+- `aria-sort` transitions when toggling or clearing sort
+
 ## Known Limitations
 
 | Area          | Issue                                                                           | Reference                              |
@@ -146,4 +172,4 @@ When adding or modifying UI:
 
 ---
 
-_Last updated: 2026‑06‑28_
+_Last updated: 2026‑07‑29_
